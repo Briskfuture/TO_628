@@ -1,2 +1,3 @@
-test <- "hello worlds"
+test <- "hello world"
+#should print hello world
 test
