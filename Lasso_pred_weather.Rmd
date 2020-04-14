@@ -1,0 +1,98 @@
+---
+title: "Predict Tiger's game attendance based on weather"
+author: "Xavier Owens"
+date: "4/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+dtw_weather <- read.csv("DTW_weather_data_edited.csv")
+baseball_data <- read.csv("Roto_2010-2019_Park.csv")
+baseball_data <- baseball_data[baseball_data$Home == "DET",]
+names(dtw_weather)[names(dtw_weather)=="Date2"] <-"Date"
+dtw_weather[is.na(dtw_weather)] <- 0
+#dtw_weather[5:23] <- lapply(dtw_weather[5:23],factor)
+
+
+baseball_and_weather <- merge(baseball_data, dtw_weather, by = "Date",all.x = TRUE)
+baseball_and_weather$Completion_info = NULL
+baseball_and_weather$Forfeit = NULL
+baseball_and_weather$Protest = NULL
+#write.csv(baseball_and_weather,"2010_2019_DET_w_weather.csv")
+```
+
+
+```{r}
+dat <- baseball_and_weather
+#predict based on weather
+dat <- dat[c(18,103:124)]
+
+library(glmnet)
+# Split data in half randomly. Create random variable with uniform [0,1] distribution and split at 0.5
+  set.seed(23094) # This will let me (or others) recreate my random numbers
+  dat$set<-ifelse(runif(n=nrow(dat))>0.5,yes=2,no=1) #Now Ive defined two sets of observations, set={1,2}
+# glmnet requires data to be defined as a matrix...this comes up often in R
+  y.1 <- dat[which(dat$set==1),1]                     #Defines y=variable 1 if set=1
+  x.1 <- as.matrix(dat[which(dat$set==1),-1])         #Defines x=all but variable 1 if set=1
+  y.2 <- dat[which(dat$set==2),1]                     #y=var 1 if set=2
+  x.2 <- as.matrix(dat[which(dat$set==2),-1])         # x=all but var1 if set=2
+
+##################################################
+###   ESTIMATING MODEL ON FIRST HALF OF DATA   ###  
+##################################################
+# Fit glmnet on first part of data
+  eq.1<-glmnet(y=y.1, x= as.matrix(x.1), family="gaussian")
+  eq.1
+
+plot(eq.1)   #plots lasso coefficient paths
+plot(eq.1,"lambda",label=TRUE)  #Same thing, different x-axis scale
+
+cv.1<-cv.glmnet(x.1,y.1,family="gaussian")
+
+plot(cv.1)
+
+coef(cv.1)
+  # Another way to do this
+  coef(eq.1,s=cv.1$lambda.1se)
+  # Predict both halves using first half fit  
+  predict.1.1 <- predict(cv.1, newx=x.1)
+  predict.1.2 <- predict(cv.1, newx=x.2)
+  oosmse.1<-mean((y.2-predict.1.2)^2)
+  summary(oosmse.1)
+  
+  ##########################################
+###   REPEAT FOR SECOND HALF OF DATA   ###
+##########################################
+  # Fit glmnet on first half of data
+  eq.2<-glmnet(y=y.2, x= x.2, family="gaussian")
+  eq.2
+  plot(eq.2)   #plots lasso coefficient paths
+  plot(eq.2,"lambda",label=TRUE)  #Same thing, different x-axis scale
+  # cv.glmnet() uses x-validation to estimate optimal lambda
+  cv.2<-cv.glmnet(y=y.2,x=x.2,family="gaussian")
+#  cv.2
+  plot(cv.2) 
+  # Print out coefficients at optimal lambda
+  coef(cv.2)
+  # Another way to do this
+  coef(eq.2,s=cv.2$lambda.1se)
+  # Predict both halves using first half fit  
+  predict.2.1 <- predict(cv.2, newx=x.1)
+  predict.2.2 <- predict(cv.2, newx=x.2)
+  oosmse.2<-mean((y.1-predict.2.1)^2)
+  summary(oosmse.2)
+  
+#####################################################
+###   COMPARE RESULTS ACROSS SAMPLES AND MODELS   ###
+#####################################################
+  # Make a little plot to see how our predictions line up. 
+  plot(x=c(predict.1.1,predict.1.2), y=c(predict.2.1,predict.2.2), 
+       xlab="Predictions using Set 1 model", ylab="predictions using Set 2 model")
+  abline(a=0,b=1)  
+```
+
