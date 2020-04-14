@@ -64,7 +64,7 @@ predict.1.2 <- predict(cv.1, newx=x.2)
 oosmse.1<-mean((y.2-predict.1.2)^2)
 summary(oosmse.1)
 plot(y.2, predict.1.2)
-
-abline(a = 0, b=1)
+#md1 <- lm(y.2~predict.1.2)
+abline(a = -4729.43, b=1.174)
 ```
 
