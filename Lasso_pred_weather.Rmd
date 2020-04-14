@@ -34,7 +34,7 @@ dat <- dat[c(10,11,12,18,103:124)]
 
 
 library(glmnet)
-# Split data in half randomly. Create random variable with uniform [0,1] distribution and split at 0.5
+# Split data in half randomly. Create random variable with uniform [0,1] distribution and split at 0.8
   set.seed(23094) # This will let me (or others) recreate my random numbers
   dat$set<-ifelse(runif(n=nrow(dat))>0.80,yes=2,no=1) #Now Ive defined two sets of observations, set={1,2}
 # glmnet requires data to be defined as a matrix...this comes up often in R
