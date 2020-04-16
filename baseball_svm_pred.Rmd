@@ -30,7 +30,10 @@ dat$DH_Game <- NULL
 dat$Year <- NULL
 dat$Away <- NULL
 dat$Game_Time <- NULL
-
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+dat[5:7] <- as.data.frame(lapply(dat[5:7], normalize))
 
 ## 75% of the sample size
 smp_size <- floor(0.75 * nrow(dat))
@@ -52,18 +55,31 @@ model.1
 ## Step 3: Evaluating model performance 
 # predictions on testing dataset
 model.1.predictions <- predict(model.1, test)
-model.1.predictions <- as.integer(model.1.predictions)
-#head(model.1.predictions)
+model.1.predictions <- as.integer(round(model.1.predictions))
 
+oosmse <- mean((test$Attendance-model.1.predictions)^2)
+summary(oosmse)
+plot(x=test$Attendance, y=model.1.predictions, 
+       xlab="Actual Attendance", ylab="Predicted Attendance")
+  abline(a=0,b=1) 
+
+lm_model <- lm(test$Attendance~model.1.predictions)
+summary(lm_model)
+
+
+```
+
+
+```{r}
 # look only at agreement vs. non-agreement
 # construct a vector of TRUE/FALSE indicating correct/incorrect predictions
 agree_tab <- data.frame(test$Attendance, model.1.predictions)
 agree_tab$difference <- agree_tab$test.Attendance - agree_tab$model.1.predictions
-
-agree_tab$agreement <- ifelse(abs(agree_tab$difference) <= 5000, TRUE, FALSE)
+limit <- 2000
+agree_tab$agreement <- ifelse(abs(agree_tab$difference) <= limit, TRUE, FALSE)
 prop.table(table(agree_tab$agreement))
 hist(agree_tab$difference, breaks = seq(-30000,30000,500))
-abline(v=5000,col="red")
-abline(v=-5000,col="red")
+abline(v=limit,col="red")
+abline(v=-limit,col="red")
 ```
 
