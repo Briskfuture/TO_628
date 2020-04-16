@@ -10,23 +10,30 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(readr)
+library(fastDummies)
 library(dplyr)
-dat <- read.csv("2010_2019_DET_w_weather.csv")
-dat$X <- NULL
-dat$DH_Game <- as.factor(dat$DH_Game)
 
-dat <- select(dat, c("DH_Game", "DOW", "Away", "H_Game_number", "H_Wins","A_Wins","Game_Time","Attendance", "PRCP", "TMAX", "TMIN",WT01,WT03,WT07, WT08, WT16,WT18))
+dat <- read_csv("2010_2019_DET_w_weather.csv")
+dat <- select(dat, c("DH_Game","Year", "DOW", "Away", "H_Game_number", "H_Wins","A_Wins","Game_Time","Attendance", "PRCP", "TMAX", "TMIN",WT01,WT03,WT07, WT08, WT16,WT18))
+
+#dat <-dat[-1]
+dat$DOW <- as.factor(dat$DOW)
 dat$DH_Game <- as.factor(dat$DH_Game)
-dat$WT01 <- as.factor(dat$WT01)
-dat$WT03 <- as.factor(dat$WT03)
-dat$WT07 <- as.factor(dat$WT07)
-dat$WT08 <- as.factor(dat$WT08)
-dat$WT16 <- as.factor(dat$WT16)
-dat$WT18 <- as.factor(dat$WT18)
+dat$Year <- as.factor(dat$Year)
+dat$Away <- as.factor(dat$Away)
+dat$Game_Time <- as.factor(dat$Game_Time)
+
+dat <- dummy_cols(dat, select_columns = c("DOW","DH_Game","Year", "Away", "Game_Time"))
+dat$DOW <- NULL
+dat$DH_Game <- NULL
+dat$Year <- NULL
+dat$Away <- NULL
+dat$Game_Time <- NULL
 
 
 ## 75% of the sample size
-smp_size <- floor(0.8 * nrow(dat))
+smp_size <- floor(0.75 * nrow(dat))
 
 ## set the seed to make your partition reproducible
 set.seed(123)
@@ -46,15 +53,17 @@ model.1
 # predictions on testing dataset
 model.1.predictions <- predict(model.1, test)
 model.1.predictions <- as.integer(model.1.predictions)
-head(model.1.predictions)
+#head(model.1.predictions)
 
 # look only at agreement vs. non-agreement
 # construct a vector of TRUE/FALSE indicating correct/incorrect predictions
 agree_tab <- data.frame(test$Attendance, model.1.predictions)
 agree_tab$difference <- agree_tab$test.Attendance - agree_tab$model.1.predictions
 
-agree_tab$agreement <- ifelse(abs(agree_tab$difference) <= 1000, TRUE, FALSE)
+agree_tab$agreement <- ifelse(abs(agree_tab$difference) <= 5000, TRUE, FALSE)
 prop.table(table(agree_tab$agreement))
-
+hist(agree_tab$difference, breaks = seq(-30000,30000,500))
+abline(v=5000,col="red")
+abline(v=-5000,col="red")
 ```
 
