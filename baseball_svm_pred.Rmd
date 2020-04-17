@@ -14,8 +14,9 @@ library(readr)
 library(fastDummies)
 library(dplyr)
 
+#SVM
 dat <- read_csv("2010_2019_DET_w_weather.csv")
-dat <- select(dat, c("DH_Game","Year", "DOW", "Away", "H_Game_number", "H_Wins","A_Wins","Game_Time","Attendance", "PRCP", "TMAX", "TMIN",WT01,WT03,WT07, WT08, WT16,WT18))
+dat <- select(dat, c("DH_Game","Year", "DOW", "Away", "H_Game_number","A_Game_number", "H_Wins","A_Wins","Game_Time","Attendance", "PRCP", "TMAX", "TMIN",WT01,WT03,WT07, WT08, WT16,WT18))
 
 #dat <-dat[-1]
 dat$DOW <- as.factor(dat$DOW)
@@ -30,10 +31,15 @@ dat$DH_Game <- NULL
 dat$Year <- NULL
 dat$Away <- NULL
 dat$Game_Time <- NULL
+
+dat$home_win_perc <- round((dat$H_Wins/dat$H_Game_number),2)
+dat$away_win_perc <- round((dat$H_Wins/dat$H_Game_number),2)
+
+
 normalize <- function(x) {
   return ((x - min(x)) / (max(x) - min(x)))
 }
-dat[5:7] <- as.data.frame(lapply(dat[5:7], normalize))
+#dat[2:4] <- as.data.frame(lapply(dat[2:4], normalize))
 
 ## 75% of the sample size
 smp_size <- floor(0.75 * nrow(dat))
@@ -45,6 +51,32 @@ train_ind <- sample(seq_len(nrow(dat)), size = smp_size)
 train <-dat[train_ind, ]
 test <- dat[-train_ind, ]
 
+```
+
+
+```{r}
+#with bagging
+library(randomForest)
+#Random Forest
+rf <- randomForest(Attendance ~.,data = train, mtry=22, importance = TRUE, ntree = 1000)
+rf
+varImpPlot(rf, n.var =10)
+
+model.rf.predictions <- predict(rf, test)
+model.rf.predictions <- as.integer(round(model.rf.predictions))
+
+oosmse_rf <- mean((test$Attendance-model.rf.predictions)^2)
+summary(oosmse_rf)
+plot(x=test$Attendance, y=model.rf.predictions, 
+       xlab="Actual Attendance", ylab="Predicted Attendance")
+  abline(a=0,b=1) 
+
+```
+
+
+
+```{r}
+#SVM Model
 library(kernlab)
 model.1 <- ksvm(Attendance ~ ., data = train,
                           kernel = "polydot", type = "eps-bsvr")
@@ -57,29 +89,14 @@ model.1
 model.1.predictions <- predict(model.1, test)
 model.1.predictions <- as.integer(round(model.1.predictions))
 
-oosmse <- mean((test$Attendance-model.1.predictions)^2)
-summary(oosmse)
+oosmse_svm <- mean((test$Attendance-model.1.predictions)^2)
+summary(oosmse_svm)
 plot(x=test$Attendance, y=model.1.predictions, 
        xlab="Actual Attendance", ylab="Predicted Attendance")
   abline(a=0,b=1) 
 
-lm_model <- lm(test$Attendance~model.1.predictions)
-summary(lm_model)
+lmsvm_model <- lm(test$Attendance~model.1.predictions)
+summary(lmsvm_model)
 
-
-```
-
-
-```{r}
-# look only at agreement vs. non-agreement
-# construct a vector of TRUE/FALSE indicating correct/incorrect predictions
-agree_tab <- data.frame(test$Attendance, model.1.predictions)
-agree_tab$difference <- agree_tab$test.Attendance - agree_tab$model.1.predictions
-limit <- 2000
-agree_tab$agreement <- ifelse(abs(agree_tab$difference) <= limit, TRUE, FALSE)
-prop.table(table(agree_tab$agreement))
-hist(agree_tab$difference, breaks = seq(-30000,30000,500))
-abline(v=limit,col="red")
-abline(v=-limit,col="red")
 ```
 
