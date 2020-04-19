@@ -65,15 +65,22 @@ varImpPlot(rf, n.var =10)
 model.rf.predictions <- predict(rf, test)
 model.rf.predictions <- as.integer(round(model.rf.predictions))
 
+oosmae_rf <- abs((test$Attendance-model.rf.predictions))
+summary(oosmae_rf)
+
 oosmse_rf <- mean((test$Attendance-model.rf.predictions)^2)
 summary(oosmse_rf)
+
+rf_pred_error <- test$Attendance-model.rf.predictions
+rf_within_3000 <- round(length(rf_pred_error[rf_pred_error >= -3000 & rf_pred_error <=3000])/length(rf_pred_error),2)
+rf_within_3000*100
 plot(x=test$Attendance, y=model.rf.predictions, 
        xlab="Actual Attendance", ylab="Predicted Attendance")
   abline(a=0,b=1) 
 
 ```
 
-
+About `r rf_within_3000*100`% of attendance predictions were within 3000 attendees of the actual attendance.
 
 ```{r}
 #SVM Model
@@ -89,8 +96,17 @@ model.1
 model.1.predictions <- predict(model.1, test)
 model.1.predictions <- as.integer(round(model.1.predictions))
 
+oosmae_svm <- abs((test$Attendance-model.1.predictions))
+summary(oosmae_svm)
+
 oosmse_svm <- mean((test$Attendance-model.1.predictions)^2)
 summary(oosmse_svm)
+
+svm_pred_error <- test$Attendance-model.1.predictions
+svm_within_3000 <- round(length(svm_pred_error[svm_pred_error >= -3000 & svm_pred_error <=3000])/length(svm_pred_error),2)
+svm_within_3000*100
+
+
 plot(x=test$Attendance, y=model.1.predictions, 
        xlab="Actual Attendance", ylab="Predicted Attendance")
   abline(a=0,b=1) 
@@ -99,4 +115,4 @@ lmsvm_model <- lm(test$Attendance~model.1.predictions)
 summary(lmsvm_model)
 
 ```
-
+About `r svm_within_3000*100`% of attendance predictions were within 3000 attendees of the actual attendance.
